@@ -1,0 +1,97 @@
+#pragma once
+#ifndef COCORO_SYMMETRIC_TASK_H
+#define COCORO_SYMMETRIC_TASK_H 1
+
+#include "cocoro/utils.hpp"
+#include "cocoro/trace.hpp"
+
+namespace cocoro {
+
+    template<typename ResultType>
+    class [[nodiscard]] task
+    {
+    public:
+        struct promise_type;
+        using result_type = ResultType;
+        using handle_type = std::coroutine_handle<promise_type>;
+
+        struct promise_type :
+            public basic_promise_base<stop_querier, trace_querier>,
+            public symmetric_result<result_type>
+        {
+            promise_type() = default;
+
+            task get_return_object() noexcept {
+                return task(handle_type::from_promise(*this));
+            }
+        };
+
+        task() = delete;
+        task(const task&) = delete;
+        task& operator=(const task&) = delete;
+
+        ~task() {
+            if (handle != nullptr) {
+                handle.destroy();
+            }
+        }
+
+        task(task&& other) noexcept :
+            handle(std::exchange(other.handle, nullptr))
+        {}
+
+        task& operator=(task&& other) noexcept {
+            auto(std::move(other)).swap(*this);
+            return *this;
+        }
+
+        void swap(task& other) noexcept {
+            std::ranges::swap(handle, other.handle);
+        }
+
+        class [[nodiscard]] task_awaiter
+        {
+        public:
+            constexpr bool await_ready() const noexcept { return false; }
+
+            template<typename Promise>
+            std::coroutine_handle<> await_suspend(std::coroutine_handle<Promise> caller) {
+                handle.promise().set_continuation(caller);
+                return handle;
+            }
+
+            result_type await_resume() {
+                return handle.promise().result();
+            }
+
+            ~task_awaiter() {
+                if (handle != nullptr) {
+                    handle.destroy();
+                }
+            }
+
+        private:
+            friend task;
+            explicit task_awaiter(handle_type handle) noexcept :
+                handle(handle)
+            {}
+
+            handle_type handle = nullptr;
+        };
+
+        task_awaiter operator co_await() && noexcept {
+            return task_awaiter(std::exchange(handle, nullptr));
+        }
+
+    private:
+        friend promise_type;
+        explicit task(handle_type handle) noexcept :
+            handle(handle)
+        {}
+
+        handle_type handle = nullptr;
+    };
+
+} // namespace cocoro
+
+#endif // COCORO_SYMMETRIC_TASK_H
