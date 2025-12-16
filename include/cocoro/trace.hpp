@@ -33,7 +33,7 @@ namespace cocoro {
         corotrace_entry(corotrace_entry&&) = default;
         corotrace_entry& operator=(corotrace_entry&&) = default;
 
-        explicit corotrace_entry(std::source_location loc) :
+        explicit corotrace_entry(const std::source_location& loc) :
             function_name(loc.function_name()),
             file_name(loc.file_name()),
             line(loc.line()),
@@ -133,7 +133,7 @@ namespace cocoro {
 
         const inplace_trace_entry& trace_entry() const noexcept { return entry; }
 
-    protected:
+    private:
         inplace_trace_entry entry = {};
     };
 
