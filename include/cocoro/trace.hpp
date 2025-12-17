@@ -204,7 +204,7 @@ namespace std {
             }
             if (width_info < 4) {
                 throw format_error("width must be at least 4");
-            } 
+            }
             return it;
         }
 
