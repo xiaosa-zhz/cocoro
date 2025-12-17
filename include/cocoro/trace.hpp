@@ -2,6 +2,7 @@
 #ifndef COCORO_COROTRACE_H
 #define COCORO_COROTRACE_H 1
 
+#include <concepts>
 #include <source_location>
 #include <utility>
 #include <coroutine>
@@ -144,16 +145,54 @@ namespace std {
 
     template<>
     struct formatter<cocoro::corotrace_entry> {
-        static constexpr std::size_t enable_full_name = std::numeric_limits<std::size_t>::max();
-        std::size_t function_name_max_width = enable_full_name;
+        std::size_t function_name_max_width = 0;
+        bool enable_full_name = true;
+        bool enable_dynamic_width = false;
 
         constexpr auto parse(format_parse_context& ctx) {
             auto it = ctx.begin();
             const auto end = ctx.end();
+
+            // empty format specifier
             if (it == end || *it == '}') {
                 return it;
             }
-            function_name_max_width = 0;
+
+            enable_full_name = false;
+
+            // dynamic width specifier
+            if (*it == '{') {
+                ++it;
+                if (it == end) {
+                    throw format_error("invalid format for corotrace_entry");
+                }
+                if (*it != '}') {
+                    // parse arg index
+                    while (it != end && *it != '}') {
+                        const char ch = *it;
+                        if (ch >= '0' && ch <= '9') {
+                            function_name_max_width = function_name_max_width * 10 + (ch - '0');
+                        } else {
+                            throw format_error("invalid format for corotrace_entry");
+                        }
+                        ++it;
+                    }
+                    ctx.check_arg_id(function_name_max_width);
+                } else {
+                    function_name_max_width = ctx.next_arg_id();
+                }
+                if (it == end) {
+                    throw format_error("invalid format for corotrace_entry");
+                }
+                ++it;
+                if (it != end && *it != '}') {
+                    throw format_error("invalid format for corotrace_entry");
+                }
+                enable_dynamic_width = true;
+                return it;
+            }
+
+            // static width specifier
             while (it != end && *it != '}') {
                 const char ch = *it;
                 if (ch >= '0' && ch <= '9') {
@@ -171,7 +210,7 @@ namespace std {
 
         template<typename FormatContext>
         auto format(const cocoro::corotrace_entry& entry, FormatContext& ctx) const {
-            if (function_name_max_width == enable_full_name) {
+            if (enable_full_name) {
                 return format_to(ctx.out(), "{} at {}:{}:{}",
                     entry.coroutine_name(),
                     entry.source_file(),
@@ -180,14 +219,31 @@ namespace std {
                 );
             }
 
+            const std::size_t width = enable_dynamic_width
+                ? ctx.arg(function_name_max_width).visit(
+                    []<typename T>(const T& value) -> std::size_t {
+                        if constexpr (std::integral<T>) {
+                            if (value < 4) {
+                                throw format_error("width must be at least 4");
+                            } else if (value < 0) {
+                                throw format_error("width argument must be non-negative");
+                            }
+                            return static_cast<std::size_t>(value);
+                        } else {
+                            throw format_error("width argument must be an integer");
+                        }
+                    }
+                )
+                : function_name_max_width;
+
             auto out = ctx.out();
             const std::string_view name(entry.coroutine_name());
 
-            if (name.length() <= function_name_max_width) {
+            if (name.length() <= width) {
                 out = format_to(out, "{}", name);
-                std::ranges::fill_n(out, function_name_max_width - name.length(), ' ');
+                std::ranges::fill_n(out, width - name.length(), ' ');
             } else {
-                out = format_to(out, "{}...", name.substr(0, function_name_max_width - 3));
+                out = format_to(out, "{}...", name.substr(0, width - 3));
             }
 
             return format_to(out, " at {}:{}:{}",

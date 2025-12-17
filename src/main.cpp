@@ -4,7 +4,7 @@
 #include <print>
 
 cocoro::task<int> example_task() {
-    std::println("{:36}", co_await cocoro::corotrace::current());
+    std::println("{:{}}", co_await cocoro::corotrace::current(), 36);
     co_return 42;
 }
 
