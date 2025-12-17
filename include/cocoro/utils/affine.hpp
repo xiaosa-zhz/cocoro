@@ -1,0 +1,7 @@
+#pragma once
+#ifndef COCORO_SCHEDULER_AFFINE_H
+#define COCORO_SCHEDULER_AFFINE_H 1
+
+// TODO
+
+#endif // COCORO_SCHEDULER_AFFINE_H

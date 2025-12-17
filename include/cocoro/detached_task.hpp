@@ -5,7 +5,7 @@
 #include <memory>
 #include <exception>
 
-#include "cocoro/trace.hpp"
+#include "cocoro/utils/trace.hpp"
 
 namespace cocoro {
 

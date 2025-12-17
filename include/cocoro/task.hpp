@@ -2,8 +2,8 @@
 #ifndef COCORO_SYMMETRIC_TASK_H
 #define COCORO_SYMMETRIC_TASK_H 1
 
-#include "cocoro/utils.hpp"
-#include "cocoro/trace.hpp"
+#include "cocoro/utils/basic.hpp"
+#include "cocoro/utils/trace.hpp"
 
 namespace cocoro {
 
