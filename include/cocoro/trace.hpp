@@ -145,7 +145,7 @@ namespace std {
 
     template<>
     struct formatter<cocoro::corotrace_entry> {
-        std::size_t function_name_max_width = 0;
+        std::size_t width_info = 0;
         bool enable_full_name = true;
         bool enable_dynamic_width = false;
 
@@ -171,15 +171,15 @@ namespace std {
                     while (it != end && *it != '}') {
                         const char ch = *it;
                         if (ch >= '0' && ch <= '9') {
-                            function_name_max_width = function_name_max_width * 10 + (ch - '0');
+                            width_info = width_info * 10 + (ch - '0');
                         } else {
                             throw format_error("invalid format for corotrace_entry");
                         }
                         ++it;
                     }
-                    ctx.check_arg_id(function_name_max_width);
+                    ctx.check_arg_id(width_info);
                 } else {
-                    function_name_max_width = ctx.next_arg_id();
+                    width_info = ctx.next_arg_id();
                 }
                 if (it == end) {
                     throw format_error("invalid format for corotrace_entry");
@@ -196,13 +196,13 @@ namespace std {
             while (it != end && *it != '}') {
                 const char ch = *it;
                 if (ch >= '0' && ch <= '9') {
-                    function_name_max_width = function_name_max_width * 10 + (ch - '0');
+                    width_info = width_info * 10 + (ch - '0');
                 } else {
                     throw format_error("invalid format for corotrace_entry");
                 }
                 ++it;
             }
-            if (function_name_max_width < 4) {
+            if (width_info < 4) {
                 throw format_error("width must be at least 4");
             } 
             return it;
@@ -220,8 +220,8 @@ namespace std {
             }
 
             const std::size_t width = enable_dynamic_width
-                ? ctx.arg(function_name_max_width).visit(
-                    []<typename T>(const T& value) -> std::size_t {
+                ? ctx.arg(width_info).visit(
+                    []<typename T>(const T& value) static -> std::size_t {
                         if constexpr (std::integral<T>) {
                             if (value < 4) {
                                 throw format_error("width must be at least 4");
@@ -234,7 +234,7 @@ namespace std {
                         }
                     }
                 )
-                : function_name_max_width;
+                : width_info;
 
             auto out = ctx.out();
             const std::string_view name(entry.coroutine_name());
