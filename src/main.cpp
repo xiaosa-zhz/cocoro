@@ -13,7 +13,7 @@ cocoro::task<int> example_nested_task() {
 }
 
 cocoro::detached_task example_detached_task() {
-    std::print("Result from example_task: {}\n", co_await example_nested_task());
+    std::println("Result from example_task: {}", co_await example_nested_task());
 }
 
 int main() {

@@ -5,7 +5,7 @@
 #include <memory>
 #include <exception>
 
-#include "cocoro/utils/trace.hpp"
+#include "cocoro/env/trace.hpp"
 
 namespace cocoro {
 
@@ -56,15 +56,23 @@ namespace cocoro {
     namespace details {
 
         // Forward declaration
-        inline std::coroutine_handle<> detached_task_stopped(std::coroutine_handle<>) noexcept;
+        inline std::coroutine_handle<> detached_task_stopped(std::coroutine_handle<> handle) noexcept;
 
-        struct detached_task_promise : trace_querier
+        struct detached_task_promise : private env::trace_env
         {
             using handle_type = std::coroutine_handle<detached_task_promise>;
             detached_task get_return_object() noexcept;
             void return_void() const noexcept {}
             std::suspend_always initial_suspend() const noexcept { return {}; }
             std::suspend_never final_suspend() const noexcept { return {}; } // coroutine destroyed on final suspend
+
+            using env_type = env::trace_env;
+            using env_type::query;
+            using env_type::await_transform;
+
+            const env_type& get_env() const noexcept {
+                return static_cast<const env_type&>(*this);
+            }
 
             void unhandled_exception() noexcept(false) {
                 // propagate exception to caller, executor, or whatever

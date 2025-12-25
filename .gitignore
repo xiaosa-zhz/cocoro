@@ -1,3 +1,5 @@
 .vscode
 .xmake
+.clice
+clice.toml
 build

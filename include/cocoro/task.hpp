@@ -2,8 +2,9 @@
 #ifndef COCORO_SYMMETRIC_TASK_H
 #define COCORO_SYMMETRIC_TASK_H 1
 
-#include "cocoro/utils/basic.hpp"
-#include "cocoro/utils/trace.hpp"
+#include "cocoro/utils/symres.hpp"
+#include "cocoro/utils/basic_promise.hpp"
+#include "cocoro/env/trace.hpp"
 
 namespace cocoro {
 
@@ -16,13 +17,20 @@ namespace cocoro {
         using handle_type = std::coroutine_handle<promise_type>;
 
         struct promise_type :
-            public basic_promise_base<stop_querier, trace_querier>,
+            public basic_promise_base<env::trace_env>,
             public symmetric_result<result_type>
         {
             promise_type() = default;
 
             task get_return_object() noexcept {
                 return task(handle_type::from_promise(*this));
+            }
+
+            template<typename T>
+            T&& await_transform(T&& awaitable,
+                std::source_location loc = std::source_location::current()) noexcept {
+                get_mut_env().set_suspension_point_info(std::move(loc));
+                return std::forward<T>(awaitable);
             }
         };
 

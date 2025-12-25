@@ -11,19 +11,39 @@
 #include <format>
 #include <algorithm>
 
-// #include "cocoro/utils.hpp"
+#include "./env.hpp"
 
-namespace cocoro {
+namespace cocoro::env {
 
     struct inplace_trace_entry {
         const inplace_trace_entry* prev = nullptr;
         std::source_location loc = {};
     };
 
-    template<typename Promise>
-    concept traceable_promise = requires (Promise& promise) {
-        { promise.trace_entry() } noexcept -> std::same_as<const inplace_trace_entry&>;
+} // namespace cocoro::env
+
+namespace cocoro::details {
+
+    struct inplace_trace_query_fn {
+        template<env::queryable_r<inplace_trace_query_fn, const env::inplace_trace_entry&> Env>
+        constexpr const env::inplace_trace_entry& operator()(const Env& env) const noexcept {
+            return env.query(*this);
+        }
     };
+
+} // namespace cocoro::details
+
+namespace cocoro::env {
+
+    inline constexpr details::inplace_trace_query_fn inplace_trace{};
+
+    template<typename Promise>
+    concept traceable_promise = env::env_aware<Promise>
+        && env::queryable_r<env::env_t<Promise>, decltype(inplace_trace), const inplace_trace_entry&>;
+
+} // namespace cocoro::env
+
+namespace cocoro {
 
     class corotrace_entry
     {
@@ -48,6 +68,8 @@ namespace cocoro {
 
         std::string description() const;
 
+        using srcloc = std::source_location;
+
     private:
         std::string function_name;
         std::string file_name;
@@ -64,21 +86,23 @@ namespace cocoro {
         corotrace(corotrace&&) = default;
         corotrace& operator=(corotrace&&) = default;
 
+        using srcloc = corotrace_entry::srcloc;
+
         class [[nodiscard]] current_trace_awaiter
         {
         public:
             constexpr bool await_ready() const noexcept { return false; }
 
-            template<traceable_promise Promise>
+            template<env::traceable_promise Promise>
             bool await_suspend(std::coroutine_handle<Promise> handle) noexcept {
-                entry = &handle.promise().trace_entry();
+                entry = &env::inplace_trace(handle.promise().get_env());
                 return false; // resume immediately
             }
 
             corotrace await_resume() const { return corotrace(entry); }
 
         private:
-            const inplace_trace_entry* entry = nullptr;
+            const env::inplace_trace_entry* entry = nullptr;
         };
 
         // co_await the result of this function to get the current corotrace
@@ -91,7 +115,7 @@ namespace cocoro {
 
     private:
         friend current_trace_awaiter;
-        explicit corotrace(const inplace_trace_entry* entry) {
+        explicit corotrace(const env::inplace_trace_entry* entry) {
             while (entry != nullptr) {
                 entries.emplace_back(entry->loc);
                 entry = entry->prev;
@@ -101,44 +125,63 @@ namespace cocoro {
         std::vector<corotrace_entry> entries;
     };
 
-    class trace_querier
+} // namespace cocoro
+
+namespace cocoro::env {
+
+    class trace_env
     {
     public:
-        using srcloc = std::source_location;
+        using srcloc = corotrace::srcloc;
 
-        trace_querier() = default;
+        trace_env() = default;
+
+        // Inherit ctor
+        template<env::queryable_r<decltype(inplace_trace), const inplace_trace_entry&> OtherEnv>
+        trace_env(const OtherEnv& other) noexcept
+            : entry{ .prev = &inplace_trace(other), .loc = {} }
+        {}
+
+        // Fallback inherit ctor (use default initialization)
+        template<typename OtherEnv>
+        trace_env(const OtherEnv& other) noexcept : trace_env() {}
+
+        trace_env(const trace_env& other) noexcept
+            : entry{ .prev = &other.entry, .loc = {} }
+        {}
+
+        const inplace_trace_entry& query(decltype(inplace_trace)) const noexcept {
+            return entry;
+        }
 
         void set_suspension_point_info(srcloc&& loc) noexcept {
             this->entry.loc = std::move(loc);
         }
 
-        // Transparent await_transform, but records source location info.
-        // If derived class provides other await_transform overloads, they should
-        // also record source location info.
+        const srcloc& suspension_point_info() const noexcept { return entry.loc; }
+
         template<typename T>
         T&& await_transform(T&& awaitable, srcloc loc = srcloc::current()) noexcept {
             set_suspension_point_info(std::move(loc));
             return std::forward<T>(awaitable);
         }
 
-        const srcloc& suspension_point_info() const noexcept { return entry.loc; }
-
-        template<typename OtherPromise>
-        void query_promise(OtherPromise& promise) noexcept {
-            if constexpr (traceable_promise<OtherPromise>) {
-                entry.prev = &promise.trace_entry();
-            } else {
-                entry.prev = nullptr;
-            }
-        }
-
-        const inplace_trace_entry& trace_entry() const noexcept { return entry; }
-
     private:
         inplace_trace_entry entry = {};
     };
 
-} // namespace cocoro
+    /*
+     * Add following method to your promise type to enable tracing:
+     *
+     *   template<typename T>
+     *   T&& await_transform(T&& awaitable,
+     *       std::source_location loc = std::source_location::current()) noexcept {
+     *       <get env::trace_env>.set_suspension_point_info(std::move(loc));
+     *       return std::forward<T>(awaitable);
+     *   }
+    */
+
+} // namespace cocoro::env
 
 // formatter for corotrace_entry and corotrace
 namespace std {
