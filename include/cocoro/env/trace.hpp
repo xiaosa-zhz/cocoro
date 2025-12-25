@@ -1,4 +1,5 @@
 #pragma once
+#include "cocoro/utils/basic.hpp"
 #ifndef COCORO_COROTRACE_H
 #define COCORO_COROTRACE_H 1
 
@@ -129,7 +130,7 @@ namespace cocoro {
 
 namespace cocoro::env {
 
-    class trace_env
+    class trace_env : details::pinned
     {
     public:
         using srcloc = corotrace::srcloc;
@@ -138,17 +139,12 @@ namespace cocoro::env {
 
         // Inherit ctor
         template<env::queryable_r<decltype(inplace_trace), const inplace_trace_entry&> OtherEnv>
-        trace_env(const OtherEnv& other) noexcept
+        trace_env(inherit_tag, const OtherEnv& other) noexcept
             : entry{ .prev = &inplace_trace(other), .loc = {} }
         {}
 
-        // Fallback inherit ctor (use default initialization)
-        template<typename OtherEnv>
-        trace_env(const OtherEnv& other) noexcept : trace_env() {}
-
-        trace_env(const trace_env& other) noexcept
-            : entry{ .prev = &other.entry, .loc = {} }
-        {}
+        // Fallback inherit ctor (use default ctor)
+        trace_env(inherit_tag, const auto&) noexcept : trace_env() {}
 
         const inplace_trace_entry& query(decltype(inplace_trace)) const noexcept {
             return entry;

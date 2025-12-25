@@ -3,6 +3,7 @@
 #define COCORO_ENVIRONMENT_BASIC_H 1
 
 #include <concepts>
+#include <type_traits>
 #include <utility>
 
 namespace cocoro::env {
@@ -28,6 +29,9 @@ namespace cocoro::env {
 
     template<typename State>
     using env_t = env_traits<State>::type;
+
+    struct inherit_tag {};
+    inline constexpr inherit_tag inherit{}; 
 
 } // namespace cocoro::env
 
@@ -70,12 +74,19 @@ namespace cocoro::env {
     // the inheritable environment may use default constructor to initialize itself.
     // If environment is not default constructible in this case, error should be reported.
     template<typename Env>
-    concept inheritable = std::copy_constructible<Env>
-        && std::is_nothrow_copy_constructible_v<Env>;
+    concept inheritable = std::constructible_from<Env, inherit_tag, const Env&>
+        && std::is_nothrow_constructible_v<Env, inherit_tag, const Env&>;
 
     template<inheritable... Envs>
     struct composed_environment : Envs... {
         using Envs::query...;
+
+        composed_environment() = default;
+
+        template<typename OtherEnv>
+        composed_environment(inherit_tag, const OtherEnv& other) noexcept
+            : Envs(inherit, other)...
+        {}
     };
 
 } // namespace cocoro
