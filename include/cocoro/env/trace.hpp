@@ -130,6 +130,7 @@ namespace cocoro {
 
 namespace cocoro::env {
 
+    // Derive from this class to enable coroutine tracing.
     struct trace_await_base {
         template<typename Self, typename T>
         T&& await_transform(this Self& self, T&& awaitable,

@@ -61,7 +61,7 @@ namespace cocoro::env {
     };
 
     template<typename Query, typename Env>
-    concept has_query = queryable<Env, Query>;
+    concept eligible_query_for = queryable<Env, Query>;
 
     template<typename Env, typename Query>
     using query_result_t = decltype(std::declval<const Env&>().query(std::declval<Query>()));

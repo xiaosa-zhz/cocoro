@@ -23,7 +23,7 @@ namespace cocoro {
 
         env_type& get_mut_env() noexcept { return *env; }
 
-        template<env::has_query<env_type> Query>
+        template<env::eligible_query_for<env_type> Query>
         env::query_result_t<env_type, Query> query(Query q) const noexcept {
             return get_env().query(q);
         }
