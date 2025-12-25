@@ -58,7 +58,7 @@ namespace cocoro {
         // Forward declaration
         inline std::coroutine_handle<> detached_task_stopped(std::coroutine_handle<> handle) noexcept;
 
-        struct detached_task_promise : private env::trace_env
+        struct detached_task_promise : public env::trace_env
         {
             using handle_type = std::coroutine_handle<detached_task_promise>;
             detached_task get_return_object() noexcept;

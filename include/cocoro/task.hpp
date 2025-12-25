@@ -18,7 +18,8 @@ namespace cocoro {
 
         struct promise_type :
             public basic_promise_base<env::trace_env>,
-            public symmetric_result<result_type>
+            public symmetric_result<result_type>,
+            public env::trace_await_base
         {
             promise_type() = default;
 
@@ -26,11 +27,8 @@ namespace cocoro {
                 return task(handle_type::from_promise(*this));
             }
 
-            template<typename T>
-            T&& await_transform(T&& awaitable,
-                std::source_location loc = std::source_location::current()) noexcept {
+            void set_suspension_point_info(std::source_location&& loc) noexcept {
                 get_mut_env().set_suspension_point_info(std::move(loc));
-                return std::forward<T>(awaitable);
             }
         };
 

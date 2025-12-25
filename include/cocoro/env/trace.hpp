@@ -130,7 +130,16 @@ namespace cocoro {
 
 namespace cocoro::env {
 
-    class trace_env : details::pinned
+    struct trace_await_base {
+        template<typename Self, typename T>
+        T&& await_transform(this Self& self, T&& awaitable,
+            std::source_location loc = std::source_location::current()) noexcept {
+            self.set_suspension_point_info(std::move(loc));
+            return std::forward<T>(awaitable);
+        }
+    };
+
+    class trace_env : public trace_await_base, private details::pinned
     {
     public:
         using srcloc = corotrace::srcloc;
@@ -155,12 +164,6 @@ namespace cocoro::env {
         }
 
         const srcloc& suspension_point_info() const noexcept { return entry.loc; }
-
-        template<typename T>
-        T&& await_transform(T&& awaitable, srcloc loc = srcloc::current()) noexcept {
-            set_suspension_point_info(std::move(loc));
-            return std::forward<T>(awaitable);
-        }
 
     private:
         inplace_trace_entry entry = {};
