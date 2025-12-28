@@ -90,7 +90,7 @@ namespace cocoro::env {
         composed_environment() = default;
 
         template<typename OtherEnv>
-            requires (inheritable_from<Envs, OtherEnv> && ...)
+            requires (inheritable_from<Envs, OtherEnv> && ... && true)
         composed_environment(inherit_tag, const OtherEnv& other) noexcept
             : Envs(inherit, other)...
         {}

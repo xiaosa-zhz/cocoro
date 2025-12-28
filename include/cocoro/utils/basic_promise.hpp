@@ -28,7 +28,7 @@ namespace cocoro {
         void set_continuation(std::coroutine_handle<OtherPromise> handle) noexcept {
             if constexpr (env::env_aware<OtherPromise>) {
                 env.emplace(env::inherit, env::get_env(handle.promise()));
-            } else if constexpr (std::is_default_constructible_v<env_type>) {
+            } else {
                 env.emplace();
             }
 

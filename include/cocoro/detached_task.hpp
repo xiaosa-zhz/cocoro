@@ -63,8 +63,9 @@ namespace cocoro {
             using handle_type = std::coroutine_handle<detached_task_promise>;
             detached_task get_return_object() noexcept;
             void return_void() const noexcept {}
-            std::suspend_always initial_suspend() const noexcept { return {}; }
-            std::suspend_never final_suspend() const noexcept { return {}; } // coroutine destroyed on final suspend
+            static std::suspend_always initial_suspend() noexcept { return {}; }
+            // Coroutine is destroyed on final suspend
+            static std::suspend_never final_suspend() noexcept { return {}; }
 
             using env_type = env::trace_env;
             using env_type::query;
@@ -113,8 +114,8 @@ namespace cocoro {
             std::ranges::swap(this->handle, other.handle);
         }
 
-        // can only be called once
-        // once called, detached_task object is not responsible for destroying the coroutine
+        // Can only be called once.
+        // Once called, detached_task object is not responsible for destroying the coroutine
         void start() && {
             std::exchange(this->handle, nullptr).resume();
         }
