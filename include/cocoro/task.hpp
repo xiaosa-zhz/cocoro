@@ -5,23 +5,26 @@
 #include "cocoro/utils/symres.hpp"
 #include "cocoro/utils/basic_promise.hpp"
 #include "cocoro/env/trace.hpp"
+#include "cocoro/env/stop_token.hpp"
 
 namespace cocoro {
 
     template<typename ResultType>
-    class [[nodiscard]] task
+    class [[nodiscard]] task : private details::moveonly
     {
+        struct task_promise;
     public:
-        struct promise_type;
+        using promise_type = task_promise;
         using result_type = ResultType;
         using handle_type = std::coroutine_handle<promise_type>;
 
-        struct promise_type :
-            public basic_promise_base<env::trace_env>,
+    private:
+        struct task_promise :
+            public basic_promise_base<env::trace_env, env::inplace_stop_env>,
             public symmetric_result<result_type>,
             public env::trace_await_base
         {
-            promise_type() = default;
+            task_promise() = default;
 
             task get_return_object() noexcept {
                 return task(handle_type::from_promise(*this));
@@ -32,9 +35,8 @@ namespace cocoro {
             }
         };
 
+    public:
         task() = delete;
-        task(const task&) = delete;
-        task& operator=(const task&) = delete;
 
         ~task() {
             if (handle != nullptr) {

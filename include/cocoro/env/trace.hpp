@@ -27,8 +27,8 @@ namespace cocoro::details {
 
     struct inplace_trace_query_fn {
         template<env::queryable_r<inplace_trace_query_fn, const env::inplace_trace_entry&> Env>
-        constexpr const env::inplace_trace_entry& operator()(const Env& env) const noexcept {
-            return env.query(*this);
+        static const env::inplace_trace_entry& operator()(const Env& env) noexcept {
+            return env.query(inplace_trace_query_fn{});
         }
     };
 

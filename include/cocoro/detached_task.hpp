@@ -86,7 +86,7 @@ namespace cocoro {
 
     } // namespace cocoro::details
 
-    class [[nodiscard]] detached_task
+    class [[nodiscard]] detached_task : private details::moveonly
     {
     public:
         using promise_type = details::detached_task_promise;
@@ -94,17 +94,15 @@ namespace cocoro {
     private:
         using handle_type = promise_type::handle_type;
         explicit detached_task(handle_type handle) noexcept : handle(handle) {}
-        detached_task() = default;
     public:
-        detached_task(const detached_task&) = delete;
-        detached_task& operator=(const detached_task&) = delete;
+        detached_task() = delete;
 
         detached_task(detached_task&& other) noexcept
             : handle(std::exchange(other.handle, nullptr))
         {}
 
         detached_task& operator=(detached_task&& other) noexcept {
-            detached_task().swap(other);
+            auto(std::move(other)).swap(*this);
             return *this;
         }
 

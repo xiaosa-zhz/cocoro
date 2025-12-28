@@ -5,6 +5,7 @@
 #include <concepts>
 #include <type_traits>
 #include <utility>
+#include <coroutine>
 
 namespace cocoro::env {
 
@@ -77,6 +78,11 @@ namespace cocoro::env {
     concept inheritable = std::constructible_from<Env, inherit_tag, const Env&>
         && std::is_nothrow_constructible_v<Env, inherit_tag, const Env&>;
 
+    template<typename Env, typename OtherEnv>
+    concept inheritable_from = inheritable<Env>
+        && std::constructible_from<Env, inherit_tag, const OtherEnv&>
+        && std::is_nothrow_constructible_v<Env, inherit_tag, const OtherEnv&>;
+
     template<inheritable... Envs>
     struct composed_environment : Envs... {
         using Envs::query...;
@@ -84,10 +90,16 @@ namespace cocoro::env {
         composed_environment() = default;
 
         template<typename OtherEnv>
+            requires (inheritable_from<Envs, OtherEnv> && ...)
         composed_environment(inherit_tag, const OtherEnv& other) noexcept
             : Envs(inherit, other)...
         {}
     };
+
+    template<env_aware Promise>
+    constexpr env_t<Promise> get_env_from_handle(std::coroutine_handle<Promise> handle) noexcept {
+        return get_env(handle.promise());
+    }
 
 } // namespace cocoro
 

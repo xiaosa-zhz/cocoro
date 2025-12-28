@@ -17,6 +17,15 @@ namespace cocoro::details {
         ~pinned() = default;
     };
 
+    struct moveonly {
+        moveonly() = default;
+        moveonly(const moveonly&) = delete;
+        moveonly(moveonly&&) = default;
+        moveonly& operator=(const moveonly&) = delete;
+        moveonly& operator=(moveonly&&) = default;
+        ~moveonly() = default;
+    };
+
     // TODO: replace with std::monostate when it is put into <utility>
     struct monostate {};
 
