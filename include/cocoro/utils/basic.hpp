@@ -40,7 +40,7 @@ namespace cocoro {
 
     struct continue_final_awaiter : std::suspend_always {
         template<continuable_promise Promise>
-        std::coroutine_handle<> await_suspend(std::coroutine_handle<Promise> handle) noexcept {
+        static std::coroutine_handle<> await_suspend(std::coroutine_handle<Promise> handle) noexcept {
             return handle.promise().continuation();
         }
     };

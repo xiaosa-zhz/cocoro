@@ -33,6 +33,8 @@ namespace cocoro {
             void set_suspension_point_info(std::source_location&& loc) noexcept {
                 get_mut_env().set_suspension_point_info(std::move(loc));
             }
+
+            continue_or_stop_awaitable final_suspend() const noexcept { return {}; }
         };
 
     public:

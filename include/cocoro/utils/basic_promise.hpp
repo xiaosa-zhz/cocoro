@@ -23,16 +23,11 @@ namespace cocoro {
 
         env_type& get_mut_env() noexcept { return *env; }
 
-        template<env::eligible_query_for<env_type> Query>
-        env::query_result_t<env_type, Query> query(Query q) const noexcept {
-            return get_env().query(q);
-        }
-
         template<typename OtherPromise>
             requires (not std::same_as<OtherPromise, void>)
         void set_continuation(std::coroutine_handle<OtherPromise> handle) noexcept {
             if constexpr (env::env_aware<OtherPromise>) {
-                env.emplace(env::inherit, handle.promise().get_env());
+                env.emplace(env::inherit, env::get_env(handle.promise()));
             } else if constexpr (std::is_default_constructible_v<env_type>) {
                 env.emplace();
             }
@@ -46,9 +41,13 @@ namespace cocoro {
             cont = handle;
         }
 
+        std::coroutine_handle<> unhandled_stopped() noexcept {
+            return stopped_handler(cont.address());
+        }
+
         std::coroutine_handle<> continuation() const noexcept { return cont; }
-        std::suspend_always initial_suspend() noexcept { return {}; }
-        continue_final_awaiter final_suspend() noexcept { return {}; }
+        static std::suspend_always initial_suspend() noexcept { return {}; }
+        static continue_final_awaiter final_suspend() noexcept { return {}; }
 
     private:
         std::coroutine_handle<> cont = nullptr;

@@ -96,7 +96,7 @@ namespace cocoro {
 
             template<env::traceable_promise Promise>
             bool await_suspend(std::coroutine_handle<Promise> handle) noexcept {
-                entry = &env::inplace_trace(handle.promise().get_env());
+                entry = &env::inplace_trace(env::get_env(handle.promise()));
                 return false; // resume immediately
             }
 

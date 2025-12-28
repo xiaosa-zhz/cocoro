@@ -220,4 +220,24 @@ namespace cocoro::env {
 
 } // namespace cocoro::env
 
+namespace cocoro {
+
+    struct continue_or_stop_awaitable : continue_final_awaiter {
+        template<typename Promise>
+            requires continuable_promise<Promise>
+            && unhandled_stopped_aware_promise<Promise>
+            && env::env_aware<Promise>
+            && env::queryable<env::env_t<Promise>, decltype(env::get_stop_token)>
+        static std::coroutine_handle<> await_suspend(std::coroutine_handle<Promise> handle) noexcept {
+            using env_type = typename Promise::env_type;
+            Promise& promise = handle.promise();
+            if (env::get_stop_token(env::get_env(promise)).stop_requested()) {
+                return promise.unhandled_stopped();
+            }
+            return continue_final_awaiter::await_suspend(handle);
+        }
+    };
+
+} // namespace cocoro
+
 #endif // COCORO_ENVIRONMENT_CANCELLATION_H
