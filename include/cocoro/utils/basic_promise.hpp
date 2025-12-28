@@ -2,7 +2,6 @@
 #ifndef COCORO_UTILITYS_SYMMETRIC_PROMISE_H
 #define COCORO_UTILITYS_SYMMETRIC_PROMISE_H 1
 
-#include <type_traits>
 #include <coroutine>
 #include <optional>
 

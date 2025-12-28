@@ -49,7 +49,7 @@ namespace cocoro {
 
     template<scheduler Scheduler>
     constexpr schedule_on_awaiter<Scheduler> schedule_on(Scheduler sch) noexcept {
-        return schedule_on_awaiter<Scheduler>{std::move(sch)};
+        return schedule_on_awaiter<Scheduler>(std::move(sch));
     }
 
 } // namespace cocoro
